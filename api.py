@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from sklearn.preprocessing import LabelEncoder
 import pandas as pd
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -35,6 +38,23 @@ model = Pipeline([
 ])
 model.fit(df.drop(["LABEL"], axis=1), df['LABEL'])
 
+# Email configuration
+EMAIL_ADDRESS = 'hilsavani1143@gmail.com'
+EMAIL_PASSWORD = 'mwnj bwdc zida iqfj'
+
+# Define function to send email
+def send_email(receiver_email, subject, body):
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_ADDRESS
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+        smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        smtp.send_message(msg)
+
 # Define prediction endpoint
 @app.post("/predict/")
 async def predict(data: InputData):
@@ -44,6 +64,14 @@ async def predict(data: InputData):
     pred = model.predict(input_df)
     # Inverse transform predicted label
     pred_label = encoder.inverse_transform(pred)[0]
+    
+    # Send email with prediction
+    receiver_email = 'vaibhavmehsana123@gmail.com'
+    subject = 'Attack Detected'
+    body = f"The predicted label is: {pred_label}"
+    if pred_label == "attack"  :
+        send_email(receiver_email, subject, body)
+    
     return {"prediction": pred_label}
 
 # Additional endpoints can be added as needed
